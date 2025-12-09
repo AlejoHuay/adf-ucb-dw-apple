@@ -26,13 +26,25 @@
 			],
 			"transformations": [
 				{
-					"name": "cast1"
+					"name": "normalizeStatus"
+				},
+				{
+					"name": "fixSaleId"
+				},
+				{
+					"name": "cleanClaimDate"
+				},
+				{
+					"name": "claimDateToDate"
+				},
+				{
+					"name": "filtrarNulos"
+				},
+				{
+					"name": "selectColumns"
 				},
 				{
 					"name": "filter1"
-				},
-				{
-					"name": "derivedColumn1"
 				}
 			],
 			"scriptLines": [
@@ -46,12 +58,48 @@
 				"     validateSchema: false,",
 				"     isolationLevel: 'READ_UNCOMMITTED',",
 				"     format: 'table') ~> dsWarranty",
-				"dsWarranty cast(output(",
-				"          claim_date as date 'yyyy-MM-dd'",
+				"cleanClaimDate derive(repair_status_clean = iif(\r",
+				"    lower(trim(repair_status)) == 'completed', 'Completed',\r",
+				"    iif(\r",
+				"        lower(trim(repair_status)) == 'pending' || lower(trim(repair_status)) == 'pendng', 'Pending',\r",
+				"        iif(\r",
+				"            lower(trim(repair_status)) == 'in progress', 'In Progress',\r",
+				"            iif(\r",
+				"                lower(trim(repair_status)) == 'rejected' || lower(trim(repair_status)) == 'rejectd' || lower(trim(repair_status)) == 'rejcted', 'Rejected',\r",
+				"                'Unknown'\r",
+				"            )\r",
+				"        )\r",
+				"    )\r",
+				")) ~> normalizeStatus",
+				"normalizeStatus derive(sale_id_clean = iif(isNull(sale_id) || trim(sale_id) == '', 'UNKNOWN', sale_id)\r",
+				") ~> fixSaleId",
+				"dsWarranty derive(claim_date_clean = iif(\r",
+				"    !isNull(toDate(claim_date, 'M/d/yyyy', 'MM/dd/yyyy')), \r",
+				"    toDate(claim_date, 'M/d/yyyy', 'MM/dd/yyyy'),\r",
+				"    iif(\r",
+				"        !isNull(toDate(claim_date, 'dd-MM-yyyy', 'd-MM-yyyy')), \r",
+				"        toDate(claim_date, 'dd-MM-yyyy', 'd-MM-yyyy'),\r",
+				"        iif(\r",
+				"            !isNull(toDate(claim_date, 'yyyy/MM/dd')), \r",
+				"            toDate(claim_date, 'yyyy/MM/dd'),\r",
+				"            toDate(claim_date, 'yyyy-MM-dd') \r",
+				"        )\r",
+				"    )\r",
+				")) ~> cleanClaimDate",
+				"fixSaleId cast(output(",
+				"          claim_date_clean as date 'yyyy-MM-dd'",
 				"     ),",
-				"     errors: true) ~> cast1",
-				"derivedColumn1 filter(isNull(sale_id) == false && sale_id != '') ~> filter1",
-				"cast1 derive() ~> derivedColumn1",
+				"     errors: true) ~> claimDateToDate",
+				"claimDateToDate filter(!isNull(claim_date_clean) && !isNull(claim_id) && !isNull(sale_id_clean)) ~> filtrarNulos",
+				"filtrarNulos select(mapColumn(",
+				"          claim_id,",
+				"          claim_date = claim_date_clean,",
+				"          sale_id = sale_id_clean,",
+				"          repair_status = repair_status_clean",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectColumns",
+				"selectColumns filter(ERROR_FUNCTION('')) ~> filter1",
 				"filter1 sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
@@ -69,7 +117,7 @@
 				"     skipDuplicateMapOutputs: true,",
 				"     errorHandlingOption: 'stopOnFirstError',",
 				"     mapColumn(",
-				"          claim_id,",
+				"          claim_id = repair_status,",
 				"          claim_date,",
 				"          sale_id,",
 				"          repair_status",
