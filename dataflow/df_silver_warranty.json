@@ -1,0 +1,34 @@
+{
+	"name": "df_silver_warranty",
+	"properties": {
+		"folder": {
+			"name": "silver"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_sql_warranty",
+						"type": "DatasetReference"
+					},
+					"name": "dsWarranty"
+				}
+			],
+			"sinks": [],
+			"transformations": [],
+			"scriptLines": [
+				"source(output(",
+				"          claim_id as string,",
+				"          claim_date as string,",
+				"          sale_id as string,",
+				"          repair_status as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> dsWarranty"
+			]
+		}
+	}
+}
