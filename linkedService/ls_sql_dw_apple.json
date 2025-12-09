@@ -1,0 +1,17 @@
+{
+	"name": "ls_sql_dw_apple",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureSqlDatabase",
+		"typeProperties": {
+			"server": "sql-ucb-sisinfo-apple-delta-9507434.database.windows.net",
+			"database": "dw_apple",
+			"encrypt": "mandatory",
+			"trustServerCertificate": false,
+			"authenticationType": "SQL",
+			"userName": "Alejandro",
+			"encryptedCredential": "ew0KICAiVmVyc2lvbiI6ICIyMDE3LTExLTMwIiwNCiAgIlByb3RlY3Rpb25Nb2RlIjogIktleSIsDQogICJTZWNyZXRDb250ZW50VHlwZSI6ICJQbGFpbnRleHQiLA0KICAiQ3JlZGVudGlhbElkIjogIkRBVEFGQUNUT1JZQDY5QTc2QTY0LUU2MjMtNEIyQy04NENGLTRGMEZBRkVCNUUwRl9mZTlkYTM3My02NDlkLTQ2NWEtODkyZC0zM2QwZDcxNjk3MDYiDQp9"
+		}
+	}
+}
