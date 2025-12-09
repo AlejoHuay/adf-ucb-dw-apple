@@ -42,9 +42,6 @@
 				},
 				{
 					"name": "selectColumns"
-				},
-				{
-					"name": "filter1"
 				}
 			],
 			"scriptLines": [
@@ -71,8 +68,7 @@
 				"        )\r",
 				"    )\r",
 				")) ~> normalizeStatus",
-				"normalizeStatus derive(sale_id_clean = iif(isNull(sale_id) || trim(sale_id) == '', 'UNKNOWN', sale_id)\r",
-				") ~> fixSaleId",
+				"normalizeStatus derive(sale_id_clean = iif(isNull(sale_id) || trim(sale_id) == '', 'UNKNOWN', sale_id)) ~> fixSaleId",
 				"dsWarranty derive(claim_date_clean = iif(\r",
 				"    !isNull(toDate(claim_date, 'M/d/yyyy', 'MM/dd/yyyy')), \r",
 				"    toDate(claim_date, 'M/d/yyyy', 'MM/dd/yyyy'),\r",
@@ -99,8 +95,7 @@
 				"     ),",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true) ~> selectColumns",
-				"selectColumns filter(ERROR_FUNCTION('')) ~> filter1",
-				"filter1 sink(allowSchemaDrift: true,",
+				"selectColumns sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
 				"          claim_id as string,",
@@ -117,7 +112,7 @@
 				"     skipDuplicateMapOutputs: true,",
 				"     errorHandlingOption: 'stopOnFirstError',",
 				"     mapColumn(",
-				"          claim_id = repair_status,",
+				"          claim_id,",
 				"          claim_date,",
 				"          sale_id,",
 				"          repair_status",
