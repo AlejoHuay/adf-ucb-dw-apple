@@ -1,0 +1,43 @@
+{
+	"name": "df_silver_stores",
+	"properties": {
+		"folder": {
+			"name": "silver"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_sql_stores",
+						"type": "DatasetReference"
+					},
+					"name": "dsStores"
+				}
+			],
+			"sinks": [],
+			"transformations": [
+				{
+					"name": "CleanStrings"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          store_id as string,",
+				"          store_name as string,",
+				"          city as string,",
+				"          country as string,",
+				"          opened_year as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> dsStores",
+				"dsStores derive(Store_Name_clean = trim(replace(replace(store_name, \"'\", \"\"), '\"', \"\")),",
+				"          City_clean = upper(trim(city)),",
+				"          Store_ID_clean = upper(trim(store_id)),",
+				"          Country_clean = iif(isNull(country) || trim(country) == '' || trim(country) == ',', 'UNKNOWN', upper(trim(replace(country, ',', ''))))) ~> CleanStrings"
+			]
+		}
+	}
+}
