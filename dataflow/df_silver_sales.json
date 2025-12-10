@@ -8,14 +8,77 @@
 		"typeProperties": {
 			"sources": [
 				{
+					"dataset": {
+						"referenceName": "ds_sql_sales",
+						"type": "DatasetReference"
+					},
 					"name": "source1"
 				}
 			],
 			"sinks": [],
-			"transformations": [],
+			"transformations": [
+				{
+					"name": "saleDateClean"
+				},
+				{
+					"name": "convertSaleDate"
+				},
+				{
+					"name": "filtrarDuplicados"
+				},
+				{
+					"name": "cleanColumns"
+				},
+				{
+					"name": "filter1"
+				},
+				{
+					"name": "select1"
+				}
+			],
 			"scriptLines": [
-				"source(allowSchemaDrift: true,",
-				"     validateSchema: false) ~> source1"
+				"source(output(",
+				"          sale_id as string,",
+				"          sale_date as string,",
+				"          store_id as string,",
+				"          product_id as string,",
+				"          quantity as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> source1",
+				"source1 derive(sale_date_clean = iif( !isNull(toDate(sale_date, 'M/d/yyyy', 'MM/dd/yyyy')), toDate(sale_date, 'M/d/yyyy', 'MM/dd/yyyy'), iif( !isNull(toDate(sale_date, 'dd/MM/yyyy')), toDate(sale_date, 'dd/MM/yyyy'), iif( !isNull(toDate(sale_date, 'dd-MM-yyyy', 'd-MM-yyyy')), toDate(sale_date, 'dd-MM-yyyy', 'd-MM-yyyy'), iif( !isNull(toDate(sale_date, 'yyyy/MM/dd')), toDate(sale_date, 'yyyy/MM/dd'), toDate(sale_date, 'yyyy-MM-dd') ) ) ) )) ~> saleDateClean",
+				"saleDateClean cast(output(",
+				"          sale_date_clean as date 'yyyy-MM-dd'",
+				"     ),",
+				"     errors: true) ~> convertSaleDate",
+				"convertSaleDate aggregate(groupBy(sale_id,",
+				"          store_id,",
+				"          sale_date_clean,",
+				"          product_id,",
+				"          quantity),",
+				"     row_cont = count()) ~> filtrarDuplicados",
+				"filtrarDuplicados derive(sale_id_clean = trim(sale_id),",
+				"          quantity_clean = iif(\r",
+				"\r",
+				"    isNull(quantity) || isNull(trim(quantity)) || trim(quantity) == '',\r",
+				"\r",
+				"    '0', \r",
+				"\r",
+				"    trim(quantity)\r",
+				"\r",
+				")) ~> cleanColumns",
+				"cleanColumns filter(!isNull(sale_id_clean) && !isNull(sale_date_clean)) ~> filter1",
+				"filter1 select(mapColumn(",
+				"          sale_id = sale_id_clean,",
+				"          quantity = quantity_clean,",
+				"          sale_date = sale_date_clean,",
+				"          store_id,",
+				"          product_id",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1"
 			]
 		}
 	}

@@ -38,10 +38,13 @@
 					"name": "cleanCity"
 				},
 				{
-					"name": "filter"
+					"name": "filtrarBasura"
 				},
 				{
-					"name": "aggregate1"
+					"name": "filtrarDuplicados"
+				},
+				{
+					"name": "selectFinal"
 				}
 			],
 			"scriptLines": [
@@ -71,14 +74,23 @@
 				"     skipDuplicateMapOutputs: true) ~> selectColumns",
 				"CleanStringsAndCountry derive(opened_year_clean = iif(isNull(opened_year) || trim(opened_year) == '', 'UNKNOWN', opened_year)) ~> cleanOpenedYear",
 				"cleanOpenedYear derive(city_clean = iif(isNull(city_clean) || trim(city_clean) == '', 'UNKNOWN', city_clean)) ~> cleanCity",
-				"selectColumns filter(store_name != 'Apple Park Visitor Center,Cupertino,United States,2017' && store_name != '12345' && city!= '2006') ~> filter",
-				"filter aggregate(groupBy(store_id,",
+				"selectColumns filter(store_name != 'Apple Park Visitor Center,Cupertino,United States,2017' && store_name != '12345' && city!= '2006') ~> filtrarBasura",
+				"filtrarBasura aggregate(groupBy(store_id,",
 				"          store_name,",
 				"          city,",
 				"          country,",
 				"          opened_year),",
-				"     row_cont = count()) ~> aggregate1",
-				"aggregate1 sink(allowSchemaDrift: true,",
+				"     row_cont = count()) ~> filtrarDuplicados",
+				"filtrarDuplicados select(mapColumn(",
+				"          store_id,",
+				"          store_name,",
+				"          city,",
+				"          country,",
+				"          opened_year",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectFinal",
+				"selectFinal sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
 				"          store_id as string,",
