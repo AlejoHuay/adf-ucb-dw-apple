@@ -15,10 +15,18 @@
 					"name": "source1"
 				}
 			],
-			"sinks": [],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_sql_silver_sales",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
 			"transformations": [
 				{
-					"name": "saleDateClean"
+					"name": "cleanColumns"
 				},
 				{
 					"name": "convertSaleDate"
@@ -27,13 +35,13 @@
 					"name": "filtrarDuplicados"
 				},
 				{
-					"name": "cleanColumns"
+					"name": "filtrarNulos"
 				},
 				{
-					"name": "filter1"
+					"name": "selectColumns"
 				},
 				{
-					"name": "select1"
+					"name": "removeCountColumn"
 				}
 			],
 			"scriptLines": [
@@ -48,37 +56,56 @@
 				"     validateSchema: false,",
 				"     isolationLevel: 'READ_UNCOMMITTED',",
 				"     format: 'table') ~> source1",
-				"source1 derive(sale_date_clean = iif( !isNull(toDate(sale_date, 'M/d/yyyy', 'MM/dd/yyyy')), toDate(sale_date, 'M/d/yyyy', 'MM/dd/yyyy'), iif( !isNull(toDate(sale_date, 'dd/MM/yyyy')), toDate(sale_date, 'dd/MM/yyyy'), iif( !isNull(toDate(sale_date, 'dd-MM-yyyy', 'd-MM-yyyy')), toDate(sale_date, 'dd-MM-yyyy', 'd-MM-yyyy'), iif( !isNull(toDate(sale_date, 'yyyy/MM/dd')), toDate(sale_date, 'yyyy/MM/dd'), toDate(sale_date, 'yyyy-MM-dd') ) ) ) )) ~> saleDateClean",
-				"saleDateClean cast(output(",
-				"          sale_date_clean as date 'yyyy-MM-dd'",
+				"source1 derive(sale_date_clean = iif( !isNull(toDate(sale_date, 'M/d/yyyy', 'MM/dd/yyyy')), toDate(sale_date, 'M/d/yyyy', 'MM/dd/yyyy'), iif( !isNull(toDate(sale_date, 'dd/MM/yyyy')), toDate(sale_date, 'dd/MM/yyyy'), iif( !isNull(toDate(sale_date, 'dd-MM-yyyy', 'd-MM-yyyy')), toDate(sale_date, 'dd-MM-yyyy', 'd-MM-yyyy'), iif( !isNull(toDate(sale_date, 'yyyy/MM/dd')), toDate(sale_date, 'yyyy/MM/dd'), toDate(sale_date, 'yyyy-MM-dd') ) ) ) ),",
+				"          sale_id_clean = trim(sale_id),",
+				"          quantity_clean = iif(    isNull(quantity) || isNull(trim(quantity)) || trim(quantity) == '',    '0',     trim(quantity))) ~> cleanColumns",
+				"cleanColumns cast(output(",
+				"          sale_date_clean as date 'yyyy-MM-dd',",
+				"          quantity_clean as integer '000'",
 				"     ),",
 				"     errors: true) ~> convertSaleDate",
-				"convertSaleDate aggregate(groupBy(sale_id,",
+				"selectColumns aggregate(groupBy(sale_id,",
 				"          store_id,",
-				"          sale_date_clean,",
+				"          sale_date,",
 				"          product_id,",
 				"          quantity),",
 				"     row_cont = count()) ~> filtrarDuplicados",
-				"filtrarDuplicados derive(sale_id_clean = trim(sale_id),",
-				"          quantity_clean = iif(\r",
-				"\r",
-				"    isNull(quantity) || isNull(trim(quantity)) || trim(quantity) == '',\r",
-				"\r",
-				"    '0', \r",
-				"\r",
-				"    trim(quantity)\r",
-				"\r",
-				")) ~> cleanColumns",
-				"cleanColumns filter(!isNull(sale_id_clean) && !isNull(sale_date_clean)) ~> filter1",
-				"filter1 select(mapColumn(",
+				"filtrarDuplicados filter(!isNull(sale_id) && !isNull(sale_date)) ~> filtrarNulos",
+				"convertSaleDate select(mapColumn(",
 				"          sale_id = sale_id_clean,",
-				"          quantity = quantity_clean,",
 				"          sale_date = sale_date_clean,",
-				"          store_id,",
-				"          product_id",
+				"          quantity = quantity_clean,",
+				"          product_id,",
+				"          store_id",
 				"     ),",
 				"     skipDuplicateMapInputs: true,",
-				"     skipDuplicateMapOutputs: true) ~> select1"
+				"     skipDuplicateMapOutputs: true) ~> selectColumns",
+				"filtrarNulos select(mapColumn(",
+				"          sale_id,",
+				"          store_id,",
+				"          sale_date,",
+				"          product_id,",
+				"          quantity",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> removeCountColumn",
+				"removeCountColumn sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          sale_id as string,",
+				"          sale_date as date,",
+				"          store_id as string,",
+				"          product_id as string,",
+				"          quantity as integer",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sink1"
 			]
 		}
 	}

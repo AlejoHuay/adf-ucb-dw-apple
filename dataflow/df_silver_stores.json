@@ -26,16 +26,10 @@
 			],
 			"transformations": [
 				{
-					"name": "CleanStringsAndCountry"
+					"name": "CleanColumns"
 				},
 				{
 					"name": "selectColumns"
-				},
-				{
-					"name": "cleanOpenedYear"
-				},
-				{
-					"name": "cleanCity"
 				},
 				{
 					"name": "filtrarBasura"
@@ -60,10 +54,15 @@
 				"     isolationLevel: 'READ_UNCOMMITTED',",
 				"     format: 'table') ~> dsStores",
 				"dsStores derive(store_name_clean = trim(replace(replace(store_name, \"'\", \"\"), '\"', \"\")),",
-				"          city_clean = upper(trim(city)),",
+				"          city_clean = iif(\r",
+				"    isNull(city) || isNull(trim(city)) || trim(city) == '',\r",
+				"    'UNKNOWN', \r",
+				"    upper(trim(city))\r",
+				"),",
 				"          store_id_clean = upper(trim(store_id)),",
-				"          country_clean = iif(isNull(country) || trim(country) == '' || trim(country) == ',', 'UNKNOWN', upper(trim(replace(country, ',', ''))))) ~> CleanStringsAndCountry",
-				"cleanCity select(mapColumn(",
+				"          country_clean = iif(isNull(country) || trim(country) == '' || trim(country) == ',', 'UNKNOWN', upper(trim(replace(country, ',', '')))),",
+				"          opened_year_clean = iif(isNull(opened_year) || trim(opened_year) == '', 'UNKNOWN', opened_year)) ~> CleanColumns",
+				"CleanColumns select(mapColumn(",
 				"          store_id = store_id_clean,",
 				"          store_name = store_name_clean,",
 				"          city = city_clean,",
@@ -72,8 +71,6 @@
 				"     ),",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true) ~> selectColumns",
-				"CleanStringsAndCountry derive(opened_year_clean = iif(isNull(opened_year) || trim(opened_year) == '', 'UNKNOWN', opened_year)) ~> cleanOpenedYear",
-				"cleanOpenedYear derive(city_clean = iif(isNull(city_clean) || trim(city_clean) == '', 'UNKNOWN', city_clean)) ~> cleanCity",
 				"selectColumns filter(store_name != 'Apple Park Visitor Center,Cupertino,United States,2017' && store_name != '12345' && city!= '2006') ~> filtrarBasura",
 				"filtrarBasura aggregate(groupBy(store_id,",
 				"          store_name,",
@@ -106,7 +103,14 @@
 				"     format: 'table',",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
-				"     errorHandlingOption: 'stopOnFirstError') ~> sink1"
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          store_id,",
+				"          store_name,",
+				"          city,",
+				"          country,",
+				"          opened_year",
+				"     )) ~> sink1"
 			]
 		}
 	}
