@@ -1,0 +1,118 @@
+{
+	"name": "df_silver_products",
+	"properties": {
+		"folder": {
+			"name": "silver"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_sql_products",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_sql_silver_products",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "cleanColumns"
+				},
+				{
+					"name": "selectColumns"
+				},
+				{
+					"name": "castPriceAndLauchDate"
+				},
+				{
+					"name": "filtrarNulos"
+				},
+				{
+					"name": "quitarDuplicados"
+				},
+				{
+					"name": "selectFinal"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          product_id as string,",
+				"          product_name as string,",
+				"          category_id as string,",
+				"          launch_date as string,",
+				"          price as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> source1",
+				"source1 derive(product_id_clean = upper(trim(product_id)),",
+				"          product_name_clean = trim(product_name),",
+				"          category_id_clean = iif(isNull(trim(category_id)) || trim(category_id) == '', 'CAT-UNKNOWN', upper(trim(category_id))),",
+				"          price_clean = iif(\r",
+				"    isNull(trim(price)) || trim(price) == '',\r",
+				"    '0.00', \r",
+				"    regexReplace(trim(price), '[^0-9\\\\.]', '') \r",
+				"),",
+				"          launch_date_clean = iif(     !isNull(toDate(launch_date, 'M/d/yyyy', 'MM/dd/yyyy')),      toDate(launch_date, 'M/d/yyyy', 'MM/dd/yyyy'),      iif(         !isNull(toDate(launch_date, 'dd/MM/yyyy')),          toDate(launch_date, 'dd/MM/yyyy'),          iif(             !isNull(toDate(launch_date, 'yyyy.MM.dd', 'yyyy/MM/dd')),              toDate(launch_date, 'yyyy.MM.dd', 'yyyy/MM/dd'),              toDate(launch_date, 'yyyy-MM-dd')          )     ) )) ~> cleanColumns",
+				"castPriceAndLauchDate select(mapColumn(",
+				"          product_id = product_id_clean,",
+				"          category_id = category_id_clean,",
+				"          product_name = product_name_clean,",
+				"          launch_date = launch_date_clean,",
+				"          price = price_clean",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectColumns",
+				"cleanColumns cast(output(",
+				"          price_clean as decimal(10,0) '000,000,000.000',",
+				"          launch_date_clean as date 'yyyy-MM-dd'",
+				"     ),",
+				"     errors: true) ~> castPriceAndLauchDate",
+				"selectColumns filter(!isNull(price) && !isNull(launch_date) ) ~> filtrarNulos",
+				"filtrarNulos aggregate(groupBy(product_id,",
+				"          category_id,",
+				"          product_name,",
+				"          launch_date,",
+				"          price),",
+				"     row_cont = count()) ~> quitarDuplicados",
+				"quitarDuplicados select(mapColumn(",
+				"          product_id,",
+				"          category_id,",
+				"          product_name,",
+				"          launch_date,",
+				"          price",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectFinal",
+				"selectFinal sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          product_id as string,",
+				"          product_name as string,",
+				"          category_id as string,",
+				"          launch_date as date,",
+				"          price as decimal(12,2)",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sink1"
+			]
+		}
+	}
+}
