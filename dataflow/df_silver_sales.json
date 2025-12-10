@@ -29,7 +29,7 @@
 					"name": "cleanColumns"
 				},
 				{
-					"name": "convertSaleDate"
+					"name": "convertSaleDateAndQuantity"
 				},
 				{
 					"name": "filtrarDuplicados"
@@ -63,7 +63,7 @@
 				"          sale_date_clean as date 'yyyy-MM-dd',",
 				"          quantity_clean as integer '000'",
 				"     ),",
-				"     errors: true) ~> convertSaleDate",
+				"     errors: true) ~> convertSaleDateAndQuantity",
 				"selectColumns aggregate(groupBy(sale_id,",
 				"          store_id,",
 				"          sale_date,",
@@ -71,7 +71,7 @@
 				"          quantity),",
 				"     row_cont = count()) ~> filtrarDuplicados",
 				"filtrarDuplicados filter(!isNull(sale_id) && !isNull(sale_date)) ~> filtrarNulos",
-				"convertSaleDate select(mapColumn(",
+				"convertSaleDateAndQuantity select(mapColumn(",
 				"          sale_id = sale_id_clean,",
 				"          sale_date = sale_date_clean,",
 				"          quantity = quantity_clean,",
@@ -105,7 +105,14 @@
 				"     format: 'table',",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
-				"     errorHandlingOption: 'stopOnFirstError') ~> sink1"
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          sale_id,",
+				"          sale_date,",
+				"          store_id,",
+				"          product_id,",
+				"          quantity",
+				"     )) ~> sink1"
 			]
 		}
 	}
