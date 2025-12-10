@@ -1,0 +1,97 @@
+{
+	"name": "df_silver_category",
+	"properties": {
+		"folder": {
+			"name": "silver"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_sql_category",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_sql_silver_category",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "cleanColumns"
+				},
+				{
+					"name": "selectColumns"
+				},
+				{
+					"name": "fixErrors"
+				},
+				{
+					"name": "aggregate1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          category_id as string,",
+				"          category_name as string,",
+				"          extra_note as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> source1",
+				"source1 derive(category_id_clean = iif(isNull(trim(category_id)) || trim(category_id) == '', 'CAT-UNKNOWN', upper(trim(category_id))),",
+				"          category_name_clean = iif(isNull(trim(category_name)) || trim(category_name) == '', 'UNKNOWN NAME', trim(category_name)),",
+				"          extra_note_clean = iif(isNull(trim(extra_note)), 'no observations', trim(extra_note))) ~> cleanColumns",
+				"cleanColumns select(mapColumn(",
+				"          category_id = category_id_clean,",
+				"          category_name = category_name_clean,",
+				"          extra_note = extra_note_clean",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectColumns",
+				"selectColumns derive(category_id = iif(category_id == 'CAT-UNKNOWN', 'CAT-12', category_id),",
+				"          category_name = iif(\r",
+				"    category_name == 'CAT-12 MissingID', \r",
+				"    'UNKNOWN NAME', \r",
+				"    replace(\r",
+				"        replace(category_name, ', ', ' '), \r",
+				"        '-', \r",
+				"        ' '\r",
+				"    )\r",
+				")) ~> fixErrors",
+				"fixErrors aggregate(groupBy(category_id),",
+				"     category_name = first(category_name),",
+				"          extra_note = first(extra_note)) ~> aggregate1",
+				"aggregate1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          category_id as string,",
+				"          category_name as string,",
+				"          extra_note as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          category_id,",
+				"          category_name,",
+				"          extra_note",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}
