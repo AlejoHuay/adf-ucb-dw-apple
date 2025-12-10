@@ -42,6 +42,12 @@
 				},
 				{
 					"name": "selectColumns"
+				},
+				{
+					"name": "quitarDuplicados"
+				},
+				{
+					"name": "selectFinalColumns"
 				}
 			],
 			"scriptLines": [
@@ -95,7 +101,20 @@
 				"     ),",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true) ~> selectColumns",
-				"selectColumns sink(allowSchemaDrift: true,",
+				"selectColumns aggregate(groupBy(claim_id,",
+				"          claim_date,",
+				"          sale_id,",
+				"          repair_status),",
+				"     CountClaims = count()) ~> quitarDuplicados",
+				"quitarDuplicados select(mapColumn(",
+				"          claim_id,",
+				"          claim_date,",
+				"          sale_id,",
+				"          repair_status",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectFinalColumns",
+				"selectFinalColumns sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
 				"          claim_id as string,",
