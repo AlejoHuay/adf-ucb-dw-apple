@@ -29,7 +29,7 @@
 				}
 			},
 			{
-				"name": "warranty",
+				"name": "Warranty",
 				"type": "ExecuteDataFlow",
 				"dependsOn": [
 					{
@@ -64,7 +64,7 @@
 				"type": "ExecuteDataFlow",
 				"dependsOn": [
 					{
-						"activity": "warranty",
+						"activity": "Warranty",
 						"dependencyConditions": [
 							"Succeeded"
 						]
