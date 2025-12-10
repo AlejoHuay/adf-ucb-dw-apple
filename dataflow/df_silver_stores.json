@@ -71,7 +71,7 @@
 				"     skipDuplicateMapOutputs: true) ~> selectColumns",
 				"CleanStringsAndCountry derive(opened_year_clean = iif(isNull(opened_year) || trim(opened_year) == '', 'UNKNOWN', opened_year)) ~> cleanOpenedYear",
 				"cleanOpenedYear derive(city_clean = iif(isNull(city_clean) || trim(city_clean) == '', 'UNKNOWN', city_clean)) ~> cleanCity",
-				"selectColumns filter(store_name != 'Apple Park Visitor Center,Cupertino,United States,2017') ~> filter",
+				"selectColumns filter(store_name != 'Apple Park Visitor Center,Cupertino,United States,2017' && store_name != '12345' && city!= '2006') ~> filter",
 				"filter aggregate(groupBy(store_id,",
 				"          store_name,",
 				"          city,",
