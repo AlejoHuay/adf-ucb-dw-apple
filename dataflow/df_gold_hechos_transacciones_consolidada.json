@@ -50,6 +50,9 @@
 				},
 				{
 					"name": "GenerateSaleSK"
+				},
+				{
+					"name": "fixNulls"
 				}
 			],
 			"scriptLines": [
@@ -97,19 +100,25 @@
 				"          sale_sk,",
 				"          sale_id = dsSqlSilverSales@sale_id,",
 				"          quantity,",
-				"          product_id,",
 				"          store_id = dsSqlSilverStores@store_id,",
 				"          store_name,",
-				"          city,",
+				"          store_city = city,",
 				"          claim_id,",
-				"          repair_status",
+				"          repair_status,",
+				"          store_country = country",
 				"     ),",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true) ~> select1",
 				"dsSqlSilverSales keyGenerate(output(sale_sk as long),",
 				"     startAt: 1L,",
 				"     stepValue: 1L) ~> GenerateSaleSK",
-				"select1 sink(allowSchemaDrift: true,",
+				"select1 derive(repair_status = iif(isNull(repair_status), 'NO CLAIM', repair_status),",
+				"          claim_id = iif(isNull(claim_id), 'NONE', claim_id),",
+				"          store_country = iif(isNull(store_country), 'UNKNOWN', store_country),",
+				"          store_city = iif(isNull(store_city), 'UNKNOWN', store_city),",
+				"          store_name = iif(isNull(store_name), 'UNKNOWN NAME', store_name),",
+				"          store_id = iif(isNull(store_id), 'ID-UNKNOWN', store_id)) ~> fixNulls",
+				"fixNulls sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
 				"          sale_sk as integer,",
@@ -132,7 +141,18 @@
 				"     format: 'table',",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
-				"     errorHandlingOption: 'stopOnFirstError') ~> sinkGoldFactTransacciones"
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          sale_sk,",
+				"          sale_id,",
+				"          quantity,",
+				"          claim_id,",
+				"          repair_status,",
+				"          store_id,",
+				"          store_name,",
+				"          store_city,",
+				"          store_country",
+				"     )) ~> sinkGoldFactTransacciones"
 			]
 		}
 	}
