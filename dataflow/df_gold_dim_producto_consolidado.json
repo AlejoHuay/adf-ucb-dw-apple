@@ -1,0 +1,118 @@
+{
+	"name": "df_gold_dim_producto_consolidado",
+	"properties": {
+		"folder": {
+			"name": "gold"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_sql_silver_category",
+						"type": "DatasetReference"
+					},
+					"name": "dsSqlSilverCategory"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_sql_silver_products",
+						"type": "DatasetReference"
+					},
+					"name": "dsSqlSilverProducts"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_gold_dim_producto_consolidada",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "LookupCategory"
+				},
+				{
+					"name": "productSk"
+				},
+				{
+					"name": "selectColumns"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          category_id as string,",
+				"          category_name as string,",
+				"          extra_note as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> dsSqlSilverCategory",
+				"source(output(",
+				"          product_id as string,",
+				"          product_name as string,",
+				"          category_id as string,",
+				"          launch_date as date,",
+				"          price as decimal(12,2)",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> dsSqlSilverProducts",
+				"productSk, dsSqlSilverCategory lookup(dsSqlSilverProducts@category_id == dsSqlSilverCategory@category_id,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> LookupCategory",
+				"dsSqlSilverProducts keyGenerate(output(product_sk as long),",
+				"     startAt: 1L,",
+				"     stepValue: 1L) ~> productSk",
+				"LookupCategory select(mapColumn(",
+				"          product_id,",
+				"          product_name,",
+				"          category_id = dsSqlSilverProducts@category_id,",
+				"          launch_date,",
+				"          price,",
+				"          product_sk,",
+				"          category_name,",
+				"          category_extra_note = extra_note",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectColumns",
+				"selectColumns sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          product_sk as integer,",
+				"          product_id as string,",
+				"          product_name as string,",
+				"          launch_date as date,",
+				"          price as decimal(12,2),",
+				"          category_id as string,",
+				"          category_name as string,",
+				"          category_extra_note as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          product_sk,",
+				"          product_id,",
+				"          product_name,",
+				"          launch_date,",
+				"          price,",
+				"          category_id,",
+				"          category_name,",
+				"          category_extra_note",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}
