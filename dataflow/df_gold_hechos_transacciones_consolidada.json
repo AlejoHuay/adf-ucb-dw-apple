@@ -1,0 +1,139 @@
+{
+	"name": "df_gold_hechos_transacciones_consolidada",
+	"properties": {
+		"folder": {
+			"name": "gold"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_sql_silver_sales",
+						"type": "DatasetReference"
+					},
+					"name": "dsSqlSilverSales"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_sql_silver_stores",
+						"type": "DatasetReference"
+					},
+					"name": "dsSqlSilverStores"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_sql_silver_warranty",
+						"type": "DatasetReference"
+					},
+					"name": "dsSqlSilverWarranty"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_gold_hechos_transacciones_consolidada",
+						"type": "DatasetReference"
+					},
+					"name": "sinkGoldFactTransacciones"
+				}
+			],
+			"transformations": [
+				{
+					"name": "LookupStore"
+				},
+				{
+					"name": "LookupWarranty"
+				},
+				{
+					"name": "select1"
+				},
+				{
+					"name": "GenerateSaleSK"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          sale_id as string,",
+				"          sale_date as date,",
+				"          store_id as string,",
+				"          product_id as string,",
+				"          quantity as integer",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> dsSqlSilverSales",
+				"source(output(",
+				"          store_id as string,",
+				"          store_name as string,",
+				"          city as string,",
+				"          country as string,",
+				"          opened_year as integer",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> dsSqlSilverStores",
+				"source(output(",
+				"          claim_id as string,",
+				"          claim_date as date,",
+				"          sale_id as string,",
+				"          repair_status as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> dsSqlSilverWarranty",
+				"GenerateSaleSK, dsSqlSilverStores lookup(dsSqlSilverSales@store_id == dsSqlSilverStores@store_id,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> LookupStore",
+				"LookupStore, dsSqlSilverWarranty lookup(dsSqlSilverSales@sale_id == dsSqlSilverWarranty@sale_id,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> LookupWarranty",
+				"LookupWarranty select(mapColumn(",
+				"          sale_sk,",
+				"          sale_id = dsSqlSilverSales@sale_id,",
+				"          quantity,",
+				"          product_id,",
+				"          store_id = dsSqlSilverStores@store_id,",
+				"          store_name,",
+				"          city,",
+				"          claim_id,",
+				"          repair_status",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"dsSqlSilverSales keyGenerate(output(sale_sk as long),",
+				"     startAt: 1L,",
+				"     stepValue: 1L) ~> GenerateSaleSK",
+				"select1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          sale_sk as integer,",
+				"          sale_id as string,",
+				"          product_sk as integer,",
+				"          store_sk as integer,",
+				"          quantity as integer,",
+				"          warranty_sk as integer,",
+				"          claim_id as string,",
+				"          repair_status as string,",
+				"          store_id as string,",
+				"          store_name as string,",
+				"          store_city as string,",
+				"          store_country as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sinkGoldFactTransacciones"
+			]
+		}
+	}
+}
