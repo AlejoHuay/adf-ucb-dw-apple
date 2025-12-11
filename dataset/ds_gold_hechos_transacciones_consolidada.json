@@ -1,0 +1,73 @@
+{
+	"name": "ds_gold_hechos_transacciones_consolidada",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_sql_dw_apple",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "gold"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "sale_sk",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "sale_id",
+				"type": "varchar"
+			},
+			{
+				"name": "product_sk",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "store_sk",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "quantity",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "warranty_sk",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "claim_id",
+				"type": "varchar"
+			},
+			{
+				"name": "repair_status",
+				"type": "varchar"
+			},
+			{
+				"name": "store_id",
+				"type": "varchar"
+			},
+			{
+				"name": "store_name",
+				"type": "varchar"
+			},
+			{
+				"name": "store_city",
+				"type": "varchar"
+			},
+			{
+				"name": "store_country",
+				"type": "varchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "gold",
+			"table": "fact_transacciones_consolidada"
+		}
+	}
+}

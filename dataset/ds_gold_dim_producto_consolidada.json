@@ -1,0 +1,55 @@
+{
+	"name": "ds_gold_dim_producto_consolidada",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_sql_dw_apple",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "gold"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "product_sk",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "product_id",
+				"type": "varchar"
+			},
+			{
+				"name": "product_name",
+				"type": "varchar"
+			},
+			{
+				"name": "launch_date",
+				"type": "date"
+			},
+			{
+				"name": "price",
+				"type": "decimal",
+				"precision": 12,
+				"scale": 2
+			},
+			{
+				"name": "category_id",
+				"type": "varchar"
+			},
+			{
+				"name": "category_name",
+				"type": "varchar"
+			},
+			{
+				"name": "category_extra_note",
+				"type": "varchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "gold",
+			"table": "dim_producto_consolidada"
+		}
+	}
+}
